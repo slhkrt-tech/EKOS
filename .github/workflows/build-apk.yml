@@ -1,0 +1,47 @@
+name: Build Android APK (EKOS)
+
+on:
+  push:
+    branches: [ "main", "master" ] # Kodu main veya master branch'ine gönderdiğinde çalışır
+
+jobs:
+  build:
+    name: Build APK on Cloud
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kodu Buluta Çek
+        uses: actions/checkout@v3
+
+      - name: Node.js Kurulumu
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Paketleri Yükle ve Ön Yüzü Derle (React)
+        working-directory: ./ekos-client
+        run: |
+          npm install
+          npm run build
+
+      - name: Capacitor ile Android'e Senkronize Et
+        working-directory: ./ekos-client
+        run: npx cap sync android
+
+      - name: Java (JDK 17) Kurulumu
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Bulutta Android Studio Motoru ile APK Derle
+        working-directory: ./ekos-client/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Üretilen APK'yı İndirme Linki Olarak Sun
+        uses: actions/upload-artifact@v3
+        with:
+          name: EKOS-Kurumsal-Saha-Uygulamasi
+          path: ekos-client/android/app/build/outputs/apk/debug/app-debug.apk

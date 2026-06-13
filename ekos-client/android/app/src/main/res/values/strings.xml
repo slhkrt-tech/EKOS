@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">EKOS</string>
+    <string name="title_activity_main">EKOS</string>
+    <string name="package_name">com.evanet.ekos</string>
+    <string name="custom_url_scheme">com.evanet.ekos</string>
+</resources>

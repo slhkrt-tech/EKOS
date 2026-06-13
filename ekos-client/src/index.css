@@ -1,0 +1,287 @@
+/* --- EKOS DESIGN SYSTEM & GLOBAL MİMARİ --- */
+:root {
+  /* Kurumsal Renk Paleti */
+  --kurumsal-lacivert: #003366;
+  --kurumsal-lacivert-hover: #002244;
+  --kurumsal-turkuaz: #00a3cc;
+  --kurumsal-turkuaz-hover: #008eb3;
+  
+  /* Temel Renkler */
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --text-dark: #1e293b;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  
+  /* Durum Renkleri */
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --success-text: #15803d;
+  --danger-bg: #fef2f2;
+  --danger-text: #b91c1c;
+}
+
+/* 1. Temel Sıfırlama */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-dark);
+  line-height: 1.5;
+}
+
+/* 2. Ortak Düzen (Layout) Bileşenleri */
+.container, .page-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--kurumsal-lacivert);
+}
+
+/* 3. Navigasyon Barı */
+.navbar {
+  background-color: var(--kurumsal-lacivert);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 4rem;
+}
+
+.navbar-brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.navbar-user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+/* 4. Kart (Card) Yapısı */
+.card {
+  background-color: var(--bg-card);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid var(--border-color);
+}
+
+.card-title {
+  color: var(--text-dark);
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.card-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-top: 0.5rem;
+}
+
+/* 5. Grid Sistemleri */
+.grid-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.grid-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+@media (min-width: 992px) {
+  .grid-3 { grid-template-columns: 1fr 2fr; }
+}
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+/* 6. Dashboard Modül Butonları */
+.action-module {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 2rem;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: center;
+}
+
+.action-module:hover {
+  border-color: var(--kurumsal-turkuaz);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transform: translateY(-2px);
+}
+
+.module-icon {
+  background-color: #eff6ff;
+  padding: 1rem;
+  border-radius: 50%;
+  font-size: 1.875rem;
+}
+
+.module-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.module-desc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* 7. Form Elemanları */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus {
+  border-color: var(--kurumsal-turkuaz);
+  box-shadow: 0 0 0 3px rgba(0, 163, 204, 0.1);
+}
+
+/* 8. Butonlar */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.btn-primary { background-color: var(--kurumsal-lacivert); color: white; }
+.btn-primary:hover { background-color: var(--kurumsal-lacivert-hover); }
+
+.btn-secondary { background-color: var(--kurumsal-turkuaz); color: white; }
+.btn-secondary:hover { background-color: var(--kurumsal-turkuaz-hover); }
+
+.btn-danger { background-color: var(--danger-text); color: white; }
+.btn-danger:hover { background-color: #991b1b; }
+
+.btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); }
+.btn-outline:hover { border-color: var(--kurumsal-lacivert); color: var(--kurumsal-lacivert); }
+
+.btn-logout { background-color: var(--danger-text); color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; }
+.btn-logout:hover { background-color: #991b1b; }
+
+.btn-block { width: 100%; }
+
+/* 9. Veri Tabloları */
+.table-responsive {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  margin-top: 1rem;
+}
+
+.ekos-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.ekos-table th {
+  background-color: #f1f5f9;
+  padding: 0.75rem 1rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ekos-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-dark);
+}
+
+.ekos-table tr:hover { background-color: #f8fafc; }
+
+/* 10. Bildirimler (Alerts) */
+.alert {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.alert-success { background-color: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+.alert-error { background-color: var(--danger-bg); color: var(--danger-text); border: 1px solid #fecaca; }
+
+/* 11. Yardımcı Sınıflar (Utilities) */
+.text-muted { color: var(--text-muted); }
+.text-sm { font-size: 0.875rem; }
+.font-bold { font-weight: 700; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.mb-4 { margin-bottom: 1rem; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
