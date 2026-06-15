@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { analyzeCustomerIntelligence } from '../utils/aiScoring';
+import { enterpriseIntegrations } from '../services/integrations'; // YENİ EKLENDİ: VoIP & ERP Entegrasyonları
 
 // Adana Bölgesi Örnek Türk Telekom Santral / POP Noktaları
 const TT_SANTRALLER = [
@@ -26,6 +28,12 @@ export default function CustomerDetail() {
     const [feasibility, setFeasibility] = useState(null);
     const [calculating, setCalculating] = useState(false);
 
+    // Yapay Zeka Analiz State'i
+    const [aiAnalysis, setAiAnalysis] = useState({ churnRisk: 0, upsellPotential: 0, recommendations: [] });
+
+    // YENİ EKLENDİ: VoIP Arama State'i
+    const [callingVoip, setCallingVoip] = useState(false);
+
     useEffect(() => {
         loadCustomerData();
     }, [id]);
@@ -43,10 +51,15 @@ export default function CustomerDetail() {
             }
 
             const requestsRes = await api.get('/requests');
-            setCustomerRequests((requestsRes.data.data || []).filter(r => r.company_name === customerData?.company_name));
+            const filteredRequests = (requestsRes.data.data || []).filter(r => r.company_name === customerData?.company_name);
+            setCustomerRequests(filteredRequests);
 
             const routesRes = await api.get('/routes/history?limit=50');
             setCustomerRoutes((routesRes.data.data || []).filter(r => r.customer_ids && r.customer_ids.includes(id.toString())));
+
+            // Yapay Zeka Skorlamasını Çalıştır
+            setAiAnalysis(analyzeCustomerIntelligence(customerData, filteredRequests));
+
         } catch (error) {
             setMessage({ type: 'error', text: 'Müşteri detayı yüklenemedi.' });
         } finally {
@@ -87,6 +100,37 @@ export default function CustomerDetail() {
         } catch (error) {
             setMessage({ type: 'error', text: 'Koordinat güncellemesi başarısız oldu.' });
         }
+    };
+
+    // YENİ EKLENDİ: VoIP Arama Tetikleyici
+    const handleVoipCall = async () => {
+        if (!customer.contact_phone) return;
+        
+        setCallingVoip(true);
+        setMessage({ type: 'success', text: `Sanal santral tetiklendi. Aranıyor: ${customer.contact_phone} (Lütfen kulaklığınızı takın)` });
+
+        // Santrali tetikle
+        await enterpriseIntegrations.initiateVoipCall(customer.contact_phone);
+
+        // Arama simülasyonu (4 saniye sonra görüşme bitti varsayalım)
+        setTimeout(() => {
+            setCallingVoip(false);
+            setMessage({ type: 'success', text: 'Görüşme sonlandı. Ses kaydı CRM sistemine işlendi.' });
+
+            // Otomatik Log Oluşturma
+            const voipLog = {
+                id: Date.now(),
+                request_type: '📞 Giden Arama (VoIP)',
+                details: `Saha Danışmanı tarafından santral üzerinden arandı. Süre: 03:14 dk. Ses Kaydı ID: REC-${Date.now()}`,
+                created_at: new Date().toISOString()
+            };
+            
+            // Listeyi anında güncelle
+            setCustomerRequests(prev => [voipLog, ...prev]);
+            
+            // 3 saniye sonra bildirim mesajını temizle
+            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        }, 4000);
     };
 
     // İki koordinat arası mesafeyi metre cinsinden hesaplayan algoritma (Haversine Formula)
@@ -188,10 +232,29 @@ export default function CustomerDetail() {
                             <label className="form-label mb-0">Yetkili Kişi</label>
                             {isEditing ? <input name="contact_person" value={editForm.contact_person || ''} onChange={handleEditChange} className="form-control" /> : <p className="font-bold">{customer.contact_person || '-'}</p>}
                         </div>
+                        
+                        {/* VoIP BUTONU EKLENEN KISIM */}
                         <div>
                             <label className="form-label mb-0">Telefon</label>
-                            {isEditing ? <input name="contact_phone" value={editForm.contact_phone || ''} onChange={handleEditChange} className="form-control" /> : <p className="font-bold">{customer.contact_phone || '-'}</p>}
+                            {isEditing ? (
+                                <input name="contact_phone" value={editForm.contact_phone || ''} onChange={handleEditChange} className="form-control" />
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <p className="font-bold">{customer.contact_phone || '-'}</p>
+                                    {customer.contact_phone && (
+                                        <button 
+                                            onClick={handleVoipCall} 
+                                            disabled={callingVoip}
+                                            className="btn btn-outline" 
+                                            style={{ padding: '0.15rem 0.5rem', fontSize: '0.8rem', borderRadius: '1rem', borderColor: '#10b981', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.25rem', opacity: callingVoip ? 0.5 : 1, whiteSpace: 'nowrap' }}
+                                        >
+                                            {callingVoip ? '📞 Çalıyor...' : '📞 Tek Tıkla Ara'}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
+
                         <div>
                             <label className="form-label mb-0">Email</label>
                             {isEditing ? <input type="email" name="contact_email" value={editForm.contact_email || ''} onChange={handleEditChange} className="form-control" /> : <p className="font-bold break-all">{customer.contact_email || '-'}</p>}
@@ -232,7 +295,7 @@ export default function CustomerDetail() {
                 {/* Orta ve Sağ Paneli Kaplayan Grid */}
                 <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     
-                    {/* YENİ MODÜL: Telekom Altyapı Fizibilite Motoru */}
+                    {/* Telekom Altyapı Fizibilite Motoru */}
                     <div className="card" style={{ border: '1px solid var(--kurumsal-lacivert)' }}>
                         <div className="flex-between mb-2">
                             <h2 className="card-title mb-0" style={{ color: 'var(--kurumsal-lacivert)' }}>⚡ Metro İnternet Fizibilite Analizi</h2>
@@ -278,6 +341,46 @@ export default function CustomerDetail() {
                                 <button onClick={() => setFeasibility(null)} className="btn btn-outline btn-block mt-4" style={{ padding: '0.5rem' }}>Analizi Sıfırla</button>
                             </div>
                         )}
+                    </div>
+
+                    {/* Yapay Zeka Müşteri Zekası */}
+                    <div className="card" style={{ gridColumn: 'span 2', background: 'linear-gradient(to right, #f8fafc, #f1f5f9)', border: '1px solid #cbd5e1' }}>
+                        <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            🧠 AI Algoritma Analizi
+                        </h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1rem' }}>
+                            
+                            {/* Upsell Potansiyeli */}
+                            <div>
+                                <div className="flex-between mb-1">
+                                    <span className="text-sm font-bold text-muted">Satış Fırsatı (Upsell)</span>
+                                    <span className="text-sm font-bold" style={{ color: 'var(--success-text)' }}>%{aiAnalysis.upsellPotential}</span>
+                                </div>
+                                <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${aiAnalysis.upsellPotential}%`, height: '100%', backgroundColor: '#10b981', transition: 'width 1s ease-in-out' }}></div>
+                                </div>
+                            </div>
+
+                            {/* Churn Riski */}
+                            <div>
+                                <div className="flex-between mb-1">
+                                    <span className="text-sm font-bold text-muted">Kayıp Riski (Churn)</span>
+                                    <span className="text-sm font-bold" style={{ color: aiAnalysis.churnRisk > 60 ? '#ef4444' : '#f59e0b' }}>%{aiAnalysis.churnRisk}</span>
+                                </div>
+                                <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${aiAnalysis.churnRisk}%`, height: '100%', backgroundColor: aiAnalysis.churnRisk > 60 ? '#ef4444' : '#f59e0b', transition: 'width 1s ease-in-out' }}></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style={{ backgroundColor: 'white', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border-light)' }}>
+                            <p className="text-sm font-bold mb-2">💡 Algoritma Tavsiyeleri:</p>
+                            <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                                {aiAnalysis.recommendations.map((rec, index) => (
+                                    <li key={index} style={{ marginBottom: '0.25rem' }}>{rec}</li>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>

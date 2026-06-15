@@ -34,23 +34,23 @@ const useDLP = () => {
 
         // Clipboard API üzerinden yapılan yazma işlemlerini de engelle
         // (Örn: navigator.clipboard.writeText, copy event tetiklemeden direkt panoya yazar)
-        const originalClipboard = {
-            writeText: navigator.clipboard?.writeText,
-            write: navigator.clipboard?.write
-        };
+        const originalWriteText = navigator.clipboard?.writeText;
+        const originalWrite = navigator.clipboard?.write;
 
-        if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText = async () => {
-                console.warn('[EKOS DLP] Clipboard writeText engellendi.');
-                return Promise.reject(new Error('DLP: Clipboard işlemi engellendi'));
-            };
-        }
+        if (navigator.clipboard) {
+            if (originalWriteText) {
+                navigator.clipboard.writeText = async () => {
+                    console.warn('[EKOS DLP] Clipboard writeText engellendi.');
+                    return Promise.reject(new Error('DLP: Clipboard işlemi engellendi'));
+                };
+            }
 
-        if (navigator.clipboard?.write) {
-            navigator.clipboard.write = async () => {
-                console.warn('[EKOS DLP] Clipboard write engellendi.');
-                return Promise.reject(new Error('DLP: Clipboard işlemi engellendi'));
-            };
+            if (originalWrite) {
+                navigator.clipboard.write = async () => {
+                    console.warn('[EKOS DLP] Clipboard write engellendi.');
+                    return Promise.reject(new Error('DLP: Clipboard işlemi engellendi'));
+                };
+            }
         }
 
         // Olay Dinleyicilerini (Event Listeners) Sisteme Ekle
@@ -69,6 +69,12 @@ const useDLP = () => {
             document.removeEventListener('selectstart', preventAction);
             document.removeEventListener('dragstart', preventAction);
             document.removeEventListener('keydown', preventKeys);
+
+            // Orijinal Clipboard fonksiyonlarını geri yükle (Bug önlemi)
+            if (navigator.clipboard) {
+                if (originalWriteText) navigator.clipboard.writeText = originalWriteText;
+                if (originalWrite) navigator.clipboard.write = originalWrite;
+            }
         };
     }, []);
 };

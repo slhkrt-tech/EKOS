@@ -44,8 +44,9 @@ const Requests = () => {
 
     useEffect(() => {
         const createSocket = () => {
-            // WebSocket adresi APK için Local IP ile değiştirildi
-            const socket = new WebSocket('ws://192.168.1.185:3000/ws');
+            // WebSocket adresi artık tek bir merkezden (.env) dinamik olarak alınıyor
+            const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000/ws';
+            const socket = new WebSocket(wsUrl);
             
             socket.onopen = () => {
                 setEvents((prev) => [...prev, { type: 'system', message: 'Canlı bağlantı kuruldu.' }]);

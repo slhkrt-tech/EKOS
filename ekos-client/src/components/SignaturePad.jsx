@@ -61,6 +61,11 @@ const SignaturePad = ({ onSave, onCancel }) => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     };
 
+    const handleCancel = () => {
+        clearCanvas();
+        onCancel?.();
+    };
+
     const handleSave = () => {
         const canvas = canvasRef.current;
         // İmzayı Base64 PNG formatına çevir
@@ -96,3 +101,4 @@ const SignaturePad = ({ onSave, onCancel }) => {
 };
 
 export default SignaturePad;
+

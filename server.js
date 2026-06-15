@@ -13,7 +13,6 @@ process.on('unhandledRejection', (reason) => {
     console.error('[EKOS CORE][unhandledRejection]', reason);
 });
 
-
 // Kontrolcüler (Controllers) sisteme dahil edilir.
 const customerController = require('./src/controllers/customerController'); 
 const authController = require('./src/controllers/authController');
@@ -24,9 +23,9 @@ const vehicleController = require('./src/controllers/vehicleController');
 const requestController = require('./src/controllers/requestController');
 const settingsController = require('./src/controllers/settingsController');
 
-
-// Sunucu port numarası çevre değişkenlerinden alınır, bulunamazsa 3000 atanır.
+// Sunucu port numarası ve CORS izni çevre değişkenlerinden alınır.
 const PORT = process.env.PORT || 3000;
+const CLIENT_URL = process.env.CLIENT_URL || '*'; // Canlı ortamda Frontend'in adresi (.env dosyasından gelir)
 
 // Yönlendirici nesnesi (instance) oluşturulur.
 const router = new CustomRouter();
@@ -35,10 +34,11 @@ const router = new CustomRouter();
 
 // Sistemin genel sağlık durumunu kontrol eden test rotası
 router.get('/', (req, res) => {
-    res.writeHead(200);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ 
         status: "Success",
-        message: "EKOS Çekirdeği Aktif ve Tüm Rotalar Çalışıyor." 
+        message: "EKOS Çekirdeği Aktif ve Tüm Rotalar Çalışıyor.",
+        environment: process.env.NODE_ENV || 'development'
     }));
 });
 
@@ -58,10 +58,10 @@ router.post('/api/routes/history', (req, res) => routePlanController.saveRoutePl
 router.get('/api/routes/history', (req, res) => routePlanController.getRouteHistory(req, res));
 router.get('/api/routes/analytics', (req, res) => routePlanController.getRouteAnalytics(req, res));
 
-// Araç filomuzu listeleyen ve yöneten API'ler (Full CRUD Güncellemesi)
+// Araç filomuzu listeleyen ve yöneten API'ler
 router.get('/api/vehicles', (req, res) => vehicleController.getAllVehicles(req, res));
 router.post('/api/vehicles', (req, res) => vehicleController.createVehicle(req, res));
-router.put('/api/vehicles', (req, res) => vehicleController.updateVehicle(req, res)); // EKSİK OLAN GÜNCELLEME ROTASI BAĞLANDI
+router.put('/api/vehicles', (req, res) => vehicleController.updateVehicle(req, res)); 
 router.delete('/api/vehicles', (req, res) => vehicleController.deleteVehicle(req, res));
 
 // Müşteri detaylarını asenkron doldurmak için gerekli API
@@ -79,10 +79,9 @@ router.put('/api/settings/city', (req, res) => settingsController.updateUserCity
 
 // Anlık müşteri talep bildirimleri için native WebSocket destekli yol
 router.post('/api/requests/notify', async (req, res) => {
-
     const { company_name, request_type, details } = req.body || {};
     if (!company_name || !request_type) {
-        res.writeHead(400);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: 'Firma adı ve talep türü gerekiyor.' }));
     }
 
@@ -109,19 +108,32 @@ router.post('/api/requests/notify', async (req, res) => {
             console.error('[EKOS WARNING] Yönetici maili gönderilemedi, ancak WebSocket bildirimi yapıldı.', error);
         }
 
-        res.writeHead(200);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'Success', message: 'Bildirim saha ekibine iletildi.', data: { notification, savedRequest, summary } }));
     } catch (error) {
         console.error('[EKOS ERROR] Bildirim sırasında talep kaydedilemedi:', error);
-        res.writeHead(500);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Sunucu hatası: Bildirim işlenemedi.' }));
     }
 });
 
 // -------------------- //
 
-// HTTP sunucusu başlatılır ve gelen tüm istekler router.handle metoduna devredilir.
+// 🛡️ CANLI ORTAM GÜVENLİK KALKANI (CORS ve Preflight Yönetimi)
 const server = http.createServer((req, res) => {
+    // 1. Her gelen isteğe (Response) CORS başlıklarını ekle
+    res.setHeader('Access-Control-Allow-Origin', CLIENT_URL);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+    // 2. Tarayıcıların güvenlik kontrolü (Preflight / OPTIONS) isteğini yanıtla
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        return res.end();
+    }
+
+    // 3. Güvenlikten geçen normal istekleri CustomRouter'a gönder
     router.handle(req, res);
 });
 
@@ -130,6 +142,9 @@ websocketHub.attach(server);
 
 // Sunucu dinlemeye başlar.
 server.listen(PORT, () => {
-    console.log(`[EKOS CORE] Sistem başarıyla başlatıldı!`);
-    console.log(`[EKOS CORE] Sunucu dinleniyor: http://localhost:${PORT}`);
+    console.log(`===========================================`);
+    console.log(`🚀 [EKOS CORE] Sistem başarıyla başlatıldı!`);
+    console.log(`🌐 [EKOS CORE] Sunucu dinleniyor: http://localhost:${PORT}`);
+    console.log(`🛡️  [EKOS CORS] İzin Verilen İstemci: ${CLIENT_URL}`);
+    console.log(`===========================================`);
 });

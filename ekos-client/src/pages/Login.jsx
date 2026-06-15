@@ -1,22 +1,40 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import api from '../services/api'; // 🚀 GERÇEK API BAĞLANTISI GERİ GELDİ
 
 const Login = () => {
+    // Canlı sürümde güvenlik gereği inputlar boş başlatılır
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setErrorMsg('');
+        setLoading(true);
+
         try {
+            // 🚀 GERÇEK BACKEND İSTEĞİ ATILIYOR
             const response = await api.post('/auth/login', { email, password });
+            
+            // Sunucudan (Node.js/Python vb.) gelen GERÇEK JWT Token'ı tarayıcıya kaydet
             localStorage.setItem('ekos_token', response.data.token);
+            
+            setLoading(false);
+            
+            // Başarılı giriş sonrası Dashboard'a yönlendir
             navigate('/dashboard');
         } catch (error) {
-            setErrorMsg(error.response?.data?.error || 'Sunucuya bağlanılamadı.');
+            console.error('[EKOS LOGIN ERROR]', error);
+            // Sunucudan gelen hata mesajını veya genel ağ hatasını kullanıcıya göster
+            setErrorMsg(
+                error.response?.data?.message || 
+                error.response?.data?.error || 
+                'Giriş başarısız. Lütfen bilgilerinizi veya internet bağlantınızı kontrol edin.'
+            );
+            setLoading(false);
         }
     };
 
@@ -42,6 +60,7 @@ const Login = () => {
                             required
                             className="form-control"
                             placeholder="ornek@evanet.com"
+                            value={email}
                             onChange={(e) => setEmail(e.target.value)} 
                         />
                     </div>
@@ -52,13 +71,18 @@ const Login = () => {
                             required
                             className="form-control"
                             placeholder="••••••••"
+                            value={password}
                             onChange={(e) => setPassword(e.target.value)} 
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary btn-block mt-4" style={{ padding: '0.8rem', fontSize: '1rem' }}>
-                        Sisteme Giriş Yap
+                    <button type="submit" className="btn btn-primary btn-block mt-4" disabled={loading} style={{ padding: '0.8rem', fontSize: '1rem' }}>
+                        {loading ? 'Sunucu Doğrulanıyor...' : 'Sisteme Giriş Yap'}
                     </button>
                 </form>
+                
+                <p style={{ fontSize: '0.75rem', marginTop: '2rem', color: '#9ca3af', textAlign: 'center' }}>
+                    EKOS Beta v1.0 | Güvenli Bağlantı
+                </p>
             </div>
         </div>
     );

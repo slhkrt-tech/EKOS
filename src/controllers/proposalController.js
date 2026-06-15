@@ -7,7 +7,7 @@ class ProposalController {
     async createAndDownloadPDF(req, res) {
         try {
             // isMailRequested (Mail gönderilsin mi?) parametresi eklenir
-            const { customerId, services, totalAmount, isMailRequested } = req.body;
+            const { customerId, services, totalAmount, isMailRequested, signatureData } = req.body;
 
             if (!customerId || !services || !totalAmount) {
                 res.writeHead(400);
@@ -24,7 +24,7 @@ class ProposalController {
             const customer = customerResult.rows[0];
 
             // 1. PDF belgesi bellek üzerinde (Buffer) oluşturulur
-            const pdfBuffer = await pdfGenerator.generateProposal(customer, services, totalAmount);
+            const pdfBuffer = await pdfGenerator.generateProposal(customer, services, totalAmount, signatureData);
 
             // 2. Eğer istemci mail gönderilmesini talep ettiyse (isMailRequested: true), mail motoru tetiklenir
             if (isMailRequested && customer.contact_email) {
@@ -48,3 +48,4 @@ class ProposalController {
 }
 
 module.exports = new ProposalController();
+

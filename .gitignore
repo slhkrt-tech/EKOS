@@ -1,0 +1,43 @@
+# =======================================================
+# EKOS PROJESİ - GITHUB YOK SAYMA LİSTESİ (.gitignore)
+# =======================================================
+
+# 1. Ortam Değişkenleri ve Şifreler (EN KRİTİK KISIM)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.pem
+
+# 2. Bağımlılıklar (Node.js)
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.pnpm-debug.log
+
+# 3. Derlenmiş (Build) Dosyalar (Frontend)
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# 4. İşletim Sistemi ve Editör Dosyaları
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 5. Log ve Hata Dosyaları
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

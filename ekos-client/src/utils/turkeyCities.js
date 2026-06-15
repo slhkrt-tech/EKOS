@@ -94,8 +94,8 @@ export const TURKEY_CITY_DEFAULT_CENTER = {
   'Bartın': { lat: 41.63, lng: 32.34 },
   'Batman': { lat: 37.88, lng: 41.14 },
   'Bayburt': { lat: 40.26, lng: 39.52 },
-  'Bilecik': { lat: 40.14, lng: 29.98 },
-'Bingöl': { lat: 38.88, lng: 40.08 },
+'Bilecik': { lat: 40.14, lng: 29.98 },
+  'Bingöl': { lat: 38.88, lng: 40.08 },
 
   'Bitlis': { lat: 38.40, lng: 42.11 },
   'Bolu': { lat: 40.73, lng: 31.61 },

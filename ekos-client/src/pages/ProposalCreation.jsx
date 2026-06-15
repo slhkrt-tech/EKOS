@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import SignaturePad from '../components/SignaturePad'; // Dijital İmza Bileşeni eklendi
+import SignaturePad from '../components/SignaturePad';
+import { enterpriseIntegrations } from '../services/integrations'; // YENİ EKLENDİ: ERP Servisi
 
 const ProposalCreation = () => {
     const navigate = useNavigate();
@@ -21,6 +22,10 @@ const ProposalCreation = () => {
     // İmza State'leri
     const [showSignaturePad, setShowSignaturePad] = useState(false);
     const [signature, setSignature] = useState(null);
+
+    // YENİ EKLENDİ: ERP State'leri
+    const [proposalGenerated, setProposalGenerated] = useState(false);
+    const [erpStatus, setErpStatus] = useState(''); // '' | 'loading' | 'success'
 
     useEffect(() => {
         const fetchCustomers = async () => {
@@ -43,13 +48,18 @@ const ProposalCreation = () => {
         const fetchCustomerDetails = async () => {
             if (!selectedCustomerId) {
                 setCustomerDetails(null);
-                setSignature(null); // Müşteri değişince imzayı sıfırla
+                setSignature(null);
+                setProposalGenerated(false); // Yeni müşteri seçilince ERP durumunu sıfırla
+                setErpStatus('');
                 return;
             }
 
             try {
                 const response = await api.get(`/customers/details?id=${selectedCustomerId}`);
                 setCustomerDetails(response.data.data || null);
+                setSignature(null);
+                setProposalGenerated(false);
+                setErpStatus('');
             } catch (error) {
                 console.error('Müşteri detayı alınamadı', error);
             }
@@ -82,7 +92,7 @@ const ProposalCreation = () => {
                 services,
                 totalAmount,
                 isMailRequested: sendMail,
-                signatureData: signature // İmzayı (Base64) arka uca gönderiyoruz
+                signatureData: signature
             };
 
             const response = await api.post('/proposals/generate', payload, { responseType: 'blob' });
@@ -96,12 +106,31 @@ const ProposalCreation = () => {
             link.remove();
             window.URL.revokeObjectURL(url);
 
+            setProposalGenerated(true); // Teklif üretildi, ERP butonu açılabilir
             setMessage({ type: 'success', text: 'PDF oluşturuldu. E-posta gönderimi istenmişse ilgili mail gönderildi.' });
         } catch (error) {
             console.error('Teklif oluşturma hatası', error);
             setMessage({ type: 'error', text: error.response?.data?.error || 'Teklif oluşturulamadı.' });
         } finally {
             setLoading(false);
+        }
+    };
+
+    // YENİ EKLENDİ: ERP Tetikleyici Fonksiyon
+    const handleSendToERP = async () => {
+        setErpStatus('loading');
+        setMessage({ type: '', text: '' });
+        
+        try {
+            const response = await enterpriseIntegrations.sendToERP({ 
+                companyName: customerDetails.company_name, 
+                amount: totalAmount 
+            });
+            setErpStatus('success');
+            setMessage({ type: 'success', text: `✅ Başarılı! Fatura Logo/SAP muhasebe sistemine aktarıldı. (Referans: ${response.erpInvoiceNo})` });
+        } catch (error) {
+            setErpStatus('');
+            setMessage({ type: 'error', text: 'ERP sistemine bağlanılamadı!' });
         }
     };
 
@@ -241,6 +270,23 @@ const ProposalCreation = () => {
                                     {loading ? 'Teklif oluşturuluyor...' : 'Onayla ve PDF Oluştur'}
                                 </button>
                             </div>
+
+                            {/* YENİ EKLENDİ: ERP Taslak Fatura Aktarımı */}
+                            {proposalGenerated && (
+                                <div style={{ backgroundColor: '#f0fdf4', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #bbf7d0', textAlign: 'center', marginTop: '1rem' }}>
+                                    <p className="font-bold text-success mb-2">✅ PDF Sözleşme Başarıyla Oluşturuldu</p>
+                                    <button 
+                                        onClick={handleSendToERP} 
+                                        disabled={erpStatus === 'loading' || erpStatus === 'success'}
+                                        className="btn btn-outline mt-2"
+                                        style={{ width: '100%', borderColor: '#1e40af', color: '#1e40af', backgroundColor: erpStatus === 'success' ? '#e0f2fe' : 'transparent', padding: '0.8rem', fontWeight: 'bold' }}
+                                    >
+                                        {erpStatus === 'loading' ? '⏳ SAP/Logo Sistemine Aktarılıyor...' : 
+                                         erpStatus === 'success' ? '🚀 Fatura ERP\'ye Aktarıldı' : 
+                                         '🏢 Onaylı Sözleşmeyi ERP\'ye (Muhasebe) Taslak Fatura Olarak Aktar'}
+                                    </button>
+                                </div>
+                            )}
                         </>
                     )}
 

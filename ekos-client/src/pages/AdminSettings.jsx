@@ -23,7 +23,7 @@ export default function AdminSettings() {
             setVehicles(response.data.data || []);
         } catch (error) {
             console.error('[EKOS ERROR] Araçlar yüklenemedi:', error);
-            setMessage({ type: 'error', text: 'Araçlar yüklenemedi.' });
+            setMessage({ type: 'error', text: 'Araçlar yüklenemedi. İnternet bağlantınızı veya sunucuyu kontrol edin.' });
         } finally {
             setLoading(false);
         }
@@ -46,7 +46,6 @@ export default function AdminSettings() {
             ac_fuel_multiplier: vehicle.ac_fuel_multiplier,
             current_km: vehicle.current_km
         });
-        // Form alanına yumuşak bir kaydırma yap (UX detayı)
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -100,7 +99,7 @@ export default function AdminSettings() {
     if (loading) {
         return (
             <div className="page-container">
-                <p className="text-muted">Yükleniyor...</p>
+                <p className="text-muted" style={{ textAlign: 'center', marginTop: '2rem' }}>Filo bilgileri sunucudan yükleniyor, lütfen bekleyin...</p>
             </div>
         );
     }
@@ -108,7 +107,7 @@ export default function AdminSettings() {
     return (
         <div className="page-container">
             {/* Başlık */}
-            <div className="page-header">
+            <div className="page-header flex-between mb-4">
                 <h1 className="page-title">Sistem Ayarları</h1>
                 <button onClick={() => navigate('/dashboard')} className="btn btn-outline">
                     ← Panele Dön
@@ -203,44 +202,44 @@ export default function AdminSettings() {
                 <div className="card" style={{ gridColumn: 'span 2' }}>
                     <h2 className="card-title">Filoyu Yönet ({vehicles.length})</h2>
                     {vehicles.length === 0 ? (
-                        <p className="text-muted text-sm">Henüz araç kaydı yok.</p>
+                        <p className="text-muted text-sm">Sunucuda henüz araç kaydı bulunmuyor.</p>
                     ) : (
-                        <div className="grid-cards" style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                        <div className="grid-cards" style={{ maxHeight: '500px', overflowY: 'auto', paddingRight: '0.5rem' }}>
                             {vehicles.map((vehicle) => (
-                                <div key={vehicle.id} style={{ padding: '1rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', backgroundColor: '#f8fafc' }}>
+                                <div key={vehicle.id} style={{ padding: '1.25rem', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-main)', marginBottom: '1rem', transition: 'var(--transition-fluid)' }}>
                                     <div className="flex-between mb-4">
                                         <div>
-                                            <p className="font-bold">{vehicle.brand_model}</p>
-                                            <p className="text-sm text-muted">Plaka: {vehicle.plate_number}</p>
+                                            <p className="font-bold" style={{ fontSize: '1.1rem', color: 'var(--text-dark)' }}>{vehicle.brand_model}</p>
+                                            <p className="text-sm text-muted" style={{ marginTop: '0.25rem' }}>Plaka: <span style={{ color: 'var(--kurumsal-lacivert)', fontWeight: '600' }}>{vehicle.plate_number}</span></p>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <button
                                                 onClick={() => handleEditClick(vehicle)}
-                                                className="btn btn-secondary text-sm"
-                                                style={{ padding: '0.3rem 0.6rem' }}
+                                                className="btn btn-outline text-sm"
+                                                style={{ padding: '0.4rem 0.8rem' }}
                                             >
                                                 Düzenle
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteVehicle(vehicle.id)}
                                                 className="btn btn-danger text-sm"
-                                                style={{ padding: '0.3rem 0.6rem' }}
+                                                style={{ padding: '0.4rem 0.8rem', backgroundColor: 'var(--error-bg)', color: 'var(--error-text)', border: 'none' }}
                                             >
                                                 Sil
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="text-sm text-muted mt-4">
-                                        <div className="flex-between mt-2">
-                                            <span>Base Tüketim:</span>
+                                    <div className="text-sm text-muted mt-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
+                                        <div>
+                                            <span style={{ display: 'block', marginBottom: '0.25rem' }}>Base Tüketim</span>
                                             <span className="font-bold" style={{ color: 'var(--text-main)' }}>{vehicle.base_fuel_consumption} L/100km</span>
                                         </div>
-                                        <div className="flex-between mt-2">
-                                            <span>Klima Çarpanı:</span>
+                                        <div>
+                                            <span style={{ display: 'block', marginBottom: '0.25rem' }}>Klima Çarpanı</span>
                                             <span className="font-bold" style={{ color: 'var(--text-main)' }}>{vehicle.ac_fuel_multiplier}x</span>
                                         </div>
-                                        <div className="flex-between mt-2">
-                                            <span>Mevcut Km:</span>
+                                        <div>
+                                            <span style={{ display: 'block', marginBottom: '0.25rem' }}>Mevcut Km</span>
                                             <span className="font-bold" style={{ color: 'var(--text-main)' }}>{vehicle.current_km} km</span>
                                         </div>
                                     </div>
@@ -251,37 +250,47 @@ export default function AdminSettings() {
                 </div>
             </div>
 
-            {/* Sistem Bilgileri ve İletişim (Değişmedi) */}
-            <div className="card mt-4">
-                <h2 className="card-title">Sistem Bilgileri</h2>
-                <div className="grid-cards">
-                    <div>
-                        <p className="form-label">Sistem Adı</p>
-                        <p className="font-bold">EKOS CRM - Elektrik Kurumsal Operasyon Sistemi</p>
-                    </div>
-                    <div>
-                        <p className="form-label">Sürüm</p>
-                        <p className="font-bold">1.1.0 (Full CRUD Architecture)</p>
-                    </div>
-                    <div>
-                        <p className="form-label">Toplam Araç</p>
-                        <p className="font-bold">{vehicles.length}</p>
-                    </div>
-                    <div>
-                        <p className="form-label">Kullanıcı Depo</p>
-                        <p className="font-bold">Adana Elektrik Dağıtım</p>
+            {/* Sistem Bilgileri ve İletişim */}
+            <div className="grid-3" style={{ marginTop: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+                <div className="card">
+                    <h2 className="card-title">Sistem Bilgileri</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.25rem' }}>
+                        <div className="flex-between">
+                            <span className="text-muted text-sm">Sistem Adı</span>
+                            <span className="font-bold text-sm">EKOS CRM - Enterprise</span>
+                        </div>
+                        <div className="flex-between">
+                            <span className="text-muted text-sm">Canlı Sürüm</span>
+                            <span className="font-bold text-sm" style={{ color: 'var(--success-text)' }}>v1.0.0 (Production)</span>
+                        </div>
+                        <div className="flex-between">
+                            <span className="text-muted text-sm">Toplam Araç</span>
+                            <span className="font-bold text-sm">{vehicles.length} Aktif Kayıt</span>
+                        </div>
+                        <div className="flex-between">
+                            <span className="text-muted text-sm">Bölge Veritabanı</span>
+                            <span className="font-bold text-sm">Adana Bölge Müdürlüğü</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="card mt-4">
-                <h2 className="card-title">Destek ve İletişim</h2>
-                <p className="text-muted text-sm mb-4">Sistem hakkında sorularınız veya sorunlarınız varsa lütfen destek ekibiyle iletişime geçiniz.</p>
-                <div className="text-sm text-muted" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <p><span className="font-bold" style={{ color: 'var(--text-main)' }}>Email:</span> slhkrt333@gmail.com</p>
-                    <p><span className="font-bold" style={{ color: 'var(--text-main)' }}>Tel:</span> 0 530 427 6483</p>
-                    <p><span className="font-bold" style={{ color: 'var(--text-main)' }}>İçerik Merkezi:</span> 24/7 Açık</p>
-
+                <div className="card">
+                    <h2 className="card-title">Destek ve İletişim</h2>
+                    <p className="text-muted text-sm mb-4">Sistem hakkında teknik destek almak veya yetkilendirme talepleri için BT birimiyle iletişime geçiniz.</p>
+                    <div className="text-sm" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className="text-muted">Email:</span>
+                            <span className="font-bold">slhkrt333@gmail.com</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className="text-muted">Telefon:</span>
+                            <span className="font-bold">0 530 427 6483</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className="text-muted">Destek Süresi:</span>
+                            <span className="font-bold" style={{ color: 'var(--success-text)' }}>7/24 Kesintisiz</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
