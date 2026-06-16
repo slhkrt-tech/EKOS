@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import useDLP from './hooks/useDLP'; // EKOS DLP (Data Loss Prevention) Güvenlik Katmanı
 import useSyncEngine from './hooks/useSyncEngine'; // EKOS Offline-First Senkronizasyon Motoru
 import ProtectedRoute from './components/ProtectedRoute'; // Güvenlik Kalkanı
+
 
 // Sayfalar
 import Login from './pages/Login';
@@ -22,6 +24,33 @@ function App() {
   
   // Arka plan senkronizasyon motorunu başlat (İnternet geldiğinde cihaz hafızasını sunucuya aktarır)
   useSyncEngine();
+
+  // 🧠 Offline-first senkronizasyon geri bildirimleri
+  // useSyncEngine event üretir; burada UI'ye yansıtırız.
+  useEffect(() => {
+    const onRequiresLogin = (e) => {
+      // Token süresi dolmuş olabilir. Kullanıcıyı login sayfasına yönlendir.
+      try {
+        localStorage.removeItem('ekos_token');
+      } catch (_) {}
+
+      window.alert('Oturum süresi doldu. Lütfen tekrar giriş yapın.');
+      window.location.href = '/';
+    };
+
+    const onRejected = (e) => {
+      const status = e?.detail?.status;
+      window.alert(`Bazı işlemler sunucu kurallarına uymadığı için iptal edildi (HTTP ${status}).`);
+    };
+
+    window.addEventListener('ekos-sync-requires-login', onRequiresLogin);
+    window.addEventListener('ekos-sync-rejected', onRejected);
+
+    return () => {
+      window.removeEventListener('ekos-sync-requires-login', onRequiresLogin);
+      window.removeEventListener('ekos-sync-rejected', onRejected);
+    };
+  }, []);
 
   return (
     <BrowserRouter>

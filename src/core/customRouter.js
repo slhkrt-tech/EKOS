@@ -5,7 +5,12 @@
 class CustomRouter {
     constructor() {
         this.routes = { GET: {}, POST: {}, PUT: {}, DELETE: {} };
+
+        // 🛡️ Payload Limiti (DoS koruması)
+        // İhtiyaca göre artırılabilir. (JSON gövde için tipik olarak 1-2MB yeterli olur.)
+        this.MAX_BODY_BYTES = Number(process.env.MAX_BODY_BYTES || 2 * 1024 * 1024); // 2MB
     }
+
 
     get(path, handler) { this.routes.GET[path] = handler; }
     post(path, handler) { this.routes.POST[path] = handler; }
@@ -37,8 +42,21 @@ class CustomRouter {
             // Veri taşıma ihtimali olan metodlar için gövde (body) ayrıştırma işlemi başlatılır.
             if (['POST', 'PUT', 'PATCH'].includes(method)) {
                 let body = '';
-                
-                req.on('data', chunk => { body += chunk.toString(); });
+                let receivedBytes = 0;
+
+                req.on('data', (chunk) => {
+                    receivedBytes += chunk.length;
+
+                    if (receivedBytes > this.MAX_BODY_BYTES) {
+                        // 🛡️ Limitsiz gövdeyle belleği şişirmeyi engeller (DoS)
+                        res.writeHead(413, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Payload Too Large' }));
+                        req.destroy();
+                        return;
+                    }
+
+                    body += chunk.toString();
+                });
 
                 req.on('end', () => {
                     try {
@@ -48,6 +66,14 @@ class CustomRouter {
                         return res.end(JSON.stringify({ error: "Hatalı İstek: Geçersiz JSON formatı." }));
                     }
                     handler(req, res);
+                });
+
+                req.on('error', () => {
+                    // Bağlantı hatalarında sunucuyu stabil tut.
+                    if (!res.headersSent) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Bad Request' }));
+                    }
                 });
             } else {
                 handler(req, res);

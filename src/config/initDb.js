@@ -24,7 +24,7 @@ async function initializeDatabase() {
         `);
         console.log('[EKOS DB] ✔️ "users" tablosu doğrulandı.');
 
-        // 2. Araç Filosu Tablosu
+        // 2. Araç Filosu Tablosu (Soft Delete destekli)
         await db.query(`
             CREATE TABLE IF NOT EXISTS vehicles (
                 id SERIAL PRIMARY KEY,
@@ -33,10 +33,19 @@ async function initializeDatabase() {
                 base_fuel_consumption DECIMAL(4,2) NOT NULL,
                 ac_fuel_multiplier DECIMAL(3,2) DEFAULT 1.15,
                 current_km INTEGER NOT NULL,
-                assigned_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+                assigned_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                deleted_at TIMESTAMP NULL
             );
         `);
         console.log('[EKOS DB] ✔️ "vehicles" tablosu doğrulandı.');
+
+        // 🛠️ Indexler (performans / ölçeklenebilirlik)
+        await db.query(`CREATE INDEX IF NOT EXISTS idx_vehicles_assigned_user_id ON vehicles(assigned_user_id);`);
+        await db.query(`CREATE INDEX IF NOT EXISTS idx_customers_current_infrastructure ON customers(current_infrastructure);`);
+        await db.query(`CREATE INDEX IF NOT EXISTS idx_route_plans_vehicle_id ON route_plans(vehicle_id);`);
+        await db.query(`CREATE INDEX IF NOT EXISTS idx_route_plans_created_at ON route_plans(created_at);`);
+
 
         // 3. Müşteri Portföyü Tablosu
         await db.query(`

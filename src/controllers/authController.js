@@ -7,6 +7,16 @@ require('dotenv').config();
  * EKOS - Kimlik Doğrulama ve Güvenlik Kontrolcüsü
  * Kullanıcı kaydı (Register), sisteme giriş (Login) ve Token üretim süreçlerini yönetir.
  */
+// 🛡️ Login Rate Limiter (Bellek içi)
+// Not: Çoklu instance kullanıyorsan Redis tabanlı limiter gerekir.
+const loginAttempts = new Map();
+
+function cleanupOldAttempts(now, windowMs) {
+    for (const [key, entry] of loginAttempts.entries()) {
+        if (now - entry.firstAttemptAt > windowMs) loginAttempts.delete(key);
+    }
+}
+
 class AuthController {
     
     // Yeni Danışman/Yönetici Kaydı (Register)
@@ -59,9 +69,37 @@ class AuthController {
         try {
             const { email, password } = req.body;
 
+            // 🛡️ Rate limit (Brute-force engelleme)
+            const remoteIp = (req.socket && req.socket.remoteAddress) ? req.socket.remoteAddress : (req.headers['x-forwarded-for'] || 'unknown');
+            const rateWindowMs = Number(process.env.LOGIN_RATE_WINDOW_MS || (10 * 60 * 1000)); // 10 dk
+            const maxAttempts = Number(process.env.LOGIN_RATE_MAX_ATTEMPTS || 10); // 10 deneme / pencere
+            const limiterKey = `${remoteIp}:${String(email).toLowerCase()}`;
+
+            const now = Date.now();
+            const entry = loginAttempts.get(limiterKey);
+            if (!entry) {
+                loginAttempts.set(limiterKey, { count: 1, firstAttemptAt: now });
+            } else {
+                // pencere dışına çıktıysa sıfırla
+                if (now - entry.firstAttemptAt > rateWindowMs) {
+                    entry.count = 1;
+                    entry.firstAttemptAt = now;
+                } else {
+                    entry.count += 1;
+                }
+            }
+            cleanupOldAttempts(now, rateWindowMs);
+
+            const currentEntry = loginAttempts.get(limiterKey);
+            if (currentEntry && currentEntry.count > maxAttempts) {
+                res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '600' });
+                return res.end(JSON.stringify({ error: 'Çok fazla giriş denemesi. Lütfen daha sonra tekrar deneyin.' }));
+            }
+
             // 1. Aşama: Veritabanında kullanıcı aranır
             const query = `SELECT * FROM users WHERE email = $1`;
             const result = await db.query(query, [email]);
+
 
             if (result.rowCount === 0) {
                 res.writeHead(401);

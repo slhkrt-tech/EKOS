@@ -16,7 +16,8 @@ class VehicleController {
     async getAllVehicles(req, res) {
         try {
             // SQL sorgusu yok, agnostik findAll() metodu var
-            const vehicles = await VehicleModel.findAll();
+            const vehicles = await VehicleModel.findAll({ is_active: true });
+
 
             res.writeHead(200);
             res.end(JSON.stringify({
@@ -144,8 +145,9 @@ class VehicleController {
                 return res.end(JSON.stringify({ error: "Silinecek aracın ID bilgisi zorunludur." }));
             }
 
-            // SQL sorgusu yok, agnostik delete() metodu var
-            const isDeleted = await VehicleModel.delete(id);
+            // SQL sorgusu yok, agnostik softDelete() metodu var
+            const isDeleted = await VehicleModel.softDelete(id);
+
 
             if (!isDeleted) {
                 res.writeHead(404);

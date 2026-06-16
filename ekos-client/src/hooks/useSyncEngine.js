@@ -54,10 +54,31 @@ const useSyncEngine = () => {
                     if (!error.response || error.response.status >= 500) {
                         failedQueue.push(action);
                     } else {
-                        console.warn(`[EKOS SYNC] ⚠️ Geçersiz istek (Hata: ${error.response.status}) kuyruktan temizlendi.`);
+                        const status = error.response.status;
+
+                        // 🧠 Offline-first veri bütünlüğü:
+                        // 4xx reddi sessizce imha edilmesin; UI'ye iptal/bildirim sinyali gitsin.
+                        if (status === 401) {
+                            window.dispatchEvent(
+                                new CustomEvent('ekos-sync-requires-login', { detail: { status, action } })
+                            );
+                        } else {
+                            window.dispatchEvent(
+                                new CustomEvent('ekos-sync-rejected', {
+                                    detail: {
+                                        status,
+                                        action,
+                                        message: `Sunucu isteği reddetti (HTTP ${status}).`
+                                    }
+                                })
+                            );
+                        }
+
+                        console.warn(`[EKOS SYNC] ⚠️ Geçersiz istek (Hata: ${status}) kuyruktan temizlendi.`);
                     }
                 }
             }
+
 
             // 2. Cihaz hafızasındaki (IndexedDB) kuyruğu güncelle
             if (failedQueue.length === 0) {

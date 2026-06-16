@@ -66,10 +66,33 @@ class Model {
         return result.rows[0]; // Güncellenen kaydı döndür
     }
 
-    // ID'ye göre kayıt sil
+    // ID'ye göre kayıt sil (Hard Delete)
     async delete(id) {
         const query = `DELETE FROM ${this.tableName} WHERE id = $1 RETURNING id;`;
         const result = await db.query(query, [id]);
+        return result.rowCount > 0;
+    }
+
+    // 🛡️ Soft Delete (ör. is_active=false)
+    async softDelete(id, options = {}) {
+        const {
+            isActiveField = 'is_active',
+            deletedAtField = 'deleted_at',
+            deletedAtValue = null
+        } = options;
+
+        // isActiveField/column yoksa (eski şema) soft delete başarısız olabilir.
+        // Bu metot yalnızca ilgili tabloda soft-delete alanları tanımlandıktan sonra kullanılmalıdır.
+        const query = `
+            UPDATE ${this.tableName}
+            SET ${isActiveField} = false,
+                ${deletedAtField} = COALESCE($2, CURRENT_TIMESTAMP)
+            WHERE id = $1
+              AND ${isActiveField} IS DISTINCT FROM false
+            RETURNING id;
+        `;
+
+        const result = await db.query(query, [id, deletedAtValue]);
         return result.rowCount > 0;
     }
 }
