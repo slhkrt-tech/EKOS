@@ -6,7 +6,9 @@ const db = require('./db');
  */
 async function initializeDatabase() {
     try {
-        console.log('[EKOS DB] Veritabanı tabloları oluşturuluyor...');
+        console.log('==================================================');
+        console.log('[EKOS DB] Bulut veritabanı tabloları inşa ediliyor...');
+        console.log('==================================================');
 
         // 1. Kullanıcılar (Danışman/Yönetici) Tablosu
         await db.query(`
@@ -20,9 +22,9 @@ async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('[EKOS DB] Users (Kullanıcılar) tablosu hazır.');
+        console.log('[EKOS DB] ✔️ "users" tablosu doğrulandı.');
 
-        // 2. Araç Filosu Tablosu (Klima ve Bölge parametreleriyle)
+        // 2. Araç Filosu Tablosu
         await db.query(`
             CREATE TABLE IF NOT EXISTS vehicles (
                 id SERIAL PRIMARY KEY,
@@ -34,7 +36,7 @@ async function initializeDatabase() {
                 assigned_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
             );
         `);
-        console.log('[EKOS DB] Vehicles (Araçlar) tablosu hazır.');
+        console.log('[EKOS DB] ✔️ "vehicles" tablosu doğrulandı.');
 
         // 3. Müşteri Portföyü Tablosu
         await db.query(`
@@ -52,9 +54,9 @@ async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('[EKOS DB] Customers (Müşteriler) tablosu hazır.');
+        console.log('[EKOS DB] ✔️ "customers" tablosu doğrulandı.');
 
-        // 4. Canlı müşteri talepleri geçmişi tablosu
+        // 4. Canlı Müşteri Talepleri Geçmişi Tablosu
         await db.query(`
             CREATE TABLE IF NOT EXISTS requests (
                 id SERIAL PRIMARY KEY,
@@ -64,9 +66,9 @@ async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('[EKOS DB] Requests (Talepler) tablosu hazır.');
+        console.log('[EKOS DB] ✔️ "requests" tablosu doğrulandı.');
 
-        // 5. Kullanıcı bazlı rota planı geçmişi tablosu
+        // 5. Rota Planı Geçmişi Tablosu
         await db.query(`
             CREATE TABLE IF NOT EXISTS route_plans (
                 id SERIAL PRIMARY KEY,
@@ -79,24 +81,27 @@ async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('[EKOS DB] Route Plans (Rota Planları) tablosu hazır.');
+        console.log('[EKOS DB] ✔️ "route_plans" tablosu doğrulandı.');
 
-        // Eğer araç tablosu boşsa varsayılan bir filo kaydı ekle
+        // Mülakat/Test ortamları için varsayılan araç kontrolü (Kayıt varsa tekrar eklemez)
         await db.query(`
             INSERT INTO vehicles (plate_number, brand_model, base_fuel_consumption, ac_fuel_multiplier, current_km)
             SELECT '06ABC123', 'Renault Kangoo', 7.50, 1.15, 42000
-            WHERE NOT EXISTS (SELECT 1 FROM vehicles);
+            WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE plate_number = '06ABC123');
         `);
-        console.log('[EKOS DB] Varsayılan araç kaydı kontrol edildi.');
+        console.log('[EKOS DB] ✔️ Varsayılan filo kayıtları kontrol edildi.');
 
-        console.log('[EKOS DB] TÜM TABLOLAR BAŞARIYLA OLUŞTURULDU!');
-        process.exit(0); // İşlem bitince betiği güvenli şekilde sonlandırır
+        console.log('==================================================');
+        console.log('[EKOS DB] 🚀 TÜM TABLOLAR CANLI SİSTEMDE HAZIR!');
+        console.log('==================================================');
+        process.exit(0);
 
     } catch (error) {
-        console.error('[EKOS DB ERROR] Tablo oluşturma sırasında kritik hata:', error);
+        console.error('==================================================');
+        console.error('[EKOS DB ERROR] Geçiş (Migration) sırasında hata:', error);
+        console.error('==================================================');
         process.exit(-1);
     }
 }
 
-// Fonksiyon tetiklenir
 initializeDatabase();

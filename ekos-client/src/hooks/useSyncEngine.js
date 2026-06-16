@@ -3,77 +3,86 @@ import axios from 'axios';
 import { offlineStorage } from '../services/offlineStorage';
 
 /**
- * EKOS - Çevrimdışı (Offline-First) Senkronizasyon Motoru
- * İnternet bağlantısı geldiğinde cihaz hafızasındaki (IndexedDB) 
- * bekleyen (kuyruktaki) API isteklerini sunucuya sırasıyla iletir.
+ * EKOS - Canlı Sürüm (Production-Ready) Senkronizasyon Motoru
+ * Cihaz internete bağlandığı an IndexedDB'deki kuyruğu FIFO (İlk giren ilk çıkar)
+ * prensibiyle, ardışık ilişkileri bozmadan güvenli bir şekilde sunucuya iletir.
  */
 const useSyncEngine = () => {
     useEffect(() => {
-        // İnternet geldiğinde çalışacak ana motor
         const syncData = async () => {
-            // Kuyrukta bekleyen işlem var mı diye telefon hafızasına bak
+            // 1. Cihaz hafızasındaki bekleyen işlemleri kontrol et
             const queue = await offlineStorage.getSyncQueue();
             if (!queue || queue.length === 0) return;
 
-            console.log(`[EKOS SYNC] 🌐 İnternet bağlantısı sağlandı! Kuyruktaki ${queue.length} işlem arka uca gönderiliyor...`);
-
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-            const token = localStorage.getItem('ekos_token');
+            console.log(`📡 [EKOS SYNC] İnternet algılandı. Kuyruktaki ${queue.length} işlem senkronize ediliyor...`);
             
-            // Başarısız olanları (sunucu hatası vb.) tekrar tutacağımız yeni kuyruk
+            // Premium UI için senkronizasyonun başladığını bildiren global event fırlat
+            window.dispatchEvent(new CustomEvent('ekos-sync-started', { detail: { count: queue.length } }));
+
+            // Canlı sunucu adresi (.env dosyasından çekilir)
+            const API_URL = import.meta.env.VITE_API_URL || 'https://api.ekos-sistem.com/api';
             const failedQueue = []; 
 
-            // Kuyruktaki işlemleri sırasıyla sunucuya ilet
+            // Sıralı işlem bütünlüğü (Sequential Integrity) için senkron döngü çalıştırıyoruz
             for (let i = 0; i < queue.length; i++) {
                 const action = queue[i];
+                
+                // Canlıda token süresi yenilenmiş olabileceği için her döngüde en güncel token'ı oku
+                const currentToken = localStorage.getItem('ekos_token');
+
                 try {
-                    // Mevcut api.js'teki interceptor'a (çevrimdışı yakalayıcıya) tekrar takılmamak için
-                    // işlemleri saf (raw) axios ile doğrudan sunucuya atıyoruz.
                     await axios({
                         baseURL: API_URL,
                         url: action.url,
                         method: action.method,
                         data: action.data,
+                        timeout: 10000, // Canlı ortamda her istek için maksimum 10 saniye tanı
                         headers: {
                             'Content-Type': 'application/json',
-                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                            ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
                         }
                     });
-                    console.log(`[EKOS SYNC] ✅ İşlem başarıyla senkronize edildi: ${action.method.toUpperCase()} ${action.url}`);
+                    console.log(`[EKOS SYNC] ✅ Başarılı: ${action.method.toUpperCase()} ${action.url}`);
                 } catch (error) {
-                    console.error(`[EKOS SYNC] ❌ İşlem senkronize edilemedi: ${action.url}`, error);
+                    console.error(`[EKOS SYNC] ❌ Başarısız: ${action.url}`, error);
                     
-                    // Eğer hata sunucu kaynaklıysa (5xx) veya internet anlık gittiyse (Network Error), 
-                    // işlemi silme, başarısızlar kuyruğuna at ki bir sonraki denemede tekrar göndersin.
+                    // 🛡️ CRITICAL PRODUCTION FILTER (Zehirli Hap Koruması):
+                    // Eğer hata sunucu kaynaklıysa (5xx) veya internet o saniyede tekrar koptuysa (Network Error),
+                    // bu işlemi silme, failedQueue'ya ekle ki bir sonraki internet gelişinde tekrar denensin.
+                    // Eğer hata 400, 403, 422 gibi istemci hatasıysa, bu istek hatalıdır ve tekrar denense de
+                    // asla çalışmayacaktır. Kuyruğu tıkamaması için canlıda bu isteği pas geçip imha ediyoruz.
                     if (!error.response || error.response.status >= 500) {
                         failedQueue.push(action);
+                    } else {
+                        console.warn(`[EKOS SYNC] ⚠️ Geçersiz istek (Hata: ${error.response.status}) kuyruktan temizlendi.`);
                     }
                 }
             }
 
-            // Kuyruğu Güncelle (Başarılı olanlar silindi, sadece başarısızlar kaldı)
+            // 2. Cihaz hafızasındaki (IndexedDB) kuyruğu güncelle
             if (failedQueue.length === 0) {
                 await offlineStorage.clearSyncQueue();
-                console.log('[EKOS SYNC] ✨ Tüm senkronizasyon tamamlandı, kuyruk tamamen temizlendi.');
+                console.log('[EKOS SYNC] ✨ Tüm kuyruk başarıyla temizlendi. Sistem tamamen güncel.');
                 
-                // İsteğe bağlı: UI tarafında "Senkronizasyon Tamamlandı" mesajı göstermek için global event fırlat
+                // Arayüze "Senkronizasyon Kusursuz Tamamlandı" mesajı ve yeşil tik göndermek için event fırlat
                 window.dispatchEvent(new CustomEvent('ekos-sync-complete'));
             } else {
-                // Sadece kalanları geri kaydet
                 await offlineStorage.saveSyncQueue(failedQueue);
-                console.warn(`[EKOS SYNC] ⚠️ ${failedQueue.length} işlem sunucu hatası nedeniyle kuyrukta bekletiliyor.`);
+                console.warn(`[EKOS SYNC] ⚠️ Hatalı sunucu yanıtı sebebiyle ${failedQueue.length} işlem sonra tekrar denenecek.`);
+                
+                // Kullanıcıya arayüzde "Bazı işlemler bekletiliyor" uyarısı göstermek için event fırlat
+                window.dispatchEvent(new CustomEvent('ekos-sync-partial', { detail: { remaining: failedQueue.length } }));
             }
         };
 
-        // 1. Durum: Uygulama ilk açıldığında internet varsa hemen kuyruğu kontrol et
+        // Durum 1: Uygulama ilk açıldığında veya sayfa yenilendiğinde internet varsa tetikle
         if (navigator.onLine) {
             syncData();
         }
 
-        // 2. Durum: Uygulama açıkken cihazın internete bağlandığı o saniyeyi (Event) dinle
+        // Durum 2: Uygulama arka planda açıkken internetin geldiği o anı yakala
         window.addEventListener('online', syncData);
 
-        // Bileşen ekrandan kalkarsa dinleyiciyi temizle
         return () => {
             window.removeEventListener('online', syncData);
         };
